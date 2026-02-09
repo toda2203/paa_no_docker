@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CampaignStatus {
+  DRAFT
+  STARTED
+  COMPLETED
+}
+
+model Template {
+  id        String     @id @default(uuid())
+  name      String
+  subject   String
+  body      String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  campaigns Campaign[]
+}
+
+model Campaign {
+  id        String         @id @default(uuid())
+  name      String
+  status    CampaignStatus @default(DRAFT)
+  senderEmail String?
+  startDate DateTime?
+  endDate   DateTime?
+  templateId String
+  template  Template       @relation(fields: [templateId], references: [id])
+  recipients Recipient[]
+  createdAt DateTime       @default(now())
+  startedAt DateTime?
+}
+
+model Recipient {
+  id             String      @id @default(uuid())
+  email          String
+  azureObjectId  String?
+  token          String      @unique
+  tokenExpiresAt DateTime
+  campaignId     String
+  campaign       Campaign    @relation(fields: [campaignId], references: [id])
+  clickEvents    ClickEvent[]
+  createdAt      DateTime    @default(now())
+}
+
+model ClickEvent {
+  id          String     @id @default(uuid())
+  recipientId String?
+  recipient   Recipient? @relation(fields: [recipientId], references: [id])
+  tenantName  String?
+  ip          String?
+  userAgent   String?
+  createdAt   DateTime   @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  entity    String?
+  entityId  String?
+  meta      Json?
+  createdAt DateTime @default(now())
+}

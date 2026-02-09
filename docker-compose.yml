@@ -1,0 +1,50 @@
+version: "3.8"
+services:
+  app:
+    build:
+      context: .
+      target: dev
+    image: phishing-mvp-backend:latest
+    env_file: .env
+    command: npm run dev
+    ports:
+      - "3001:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: phishing_mvp
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+  ui:
+    build:
+      context: ./ui
+    image: phishing-mvp-frontend:latest
+    environment:
+      - VITE_API_BASE_URL=${PUBLIC_BASE_URL}
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./ui:/app
+      - /app/node_modules
+    restart: unless-stopped
+    depends_on:
+      - app
+
+volumes:
+  postgres_data:
