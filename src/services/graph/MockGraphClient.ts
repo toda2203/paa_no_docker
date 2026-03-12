@@ -31,7 +31,11 @@ export class MockGraphClient implements GraphClient {
 
   async listSenders(): Promise<GraphSender[]> {
     if (this.config.graphSenderAddress) {
-      return [{ email: this.config.graphSenderAddress, displayName: 'Mock Sender' }];
+      const displayName = this.config.tenantName?.trim()
+        ? `${this.config.tenantName.trim()} Sender`
+        : 'Mock Sender';
+
+      return [{ email: this.config.graphSenderAddress, displayName }];
     }
 
     return [];

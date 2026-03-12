@@ -1,4 +1,5 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import type { FormEvent } from 'react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import './App.css'
@@ -120,10 +121,6 @@ function App() {
   })
   const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(null)
   const [deletingCampaignId, setDeletingCampaignId] = useState<string | null>(null)
-
-  const trackingHint = useMemo(() => {
-    return 'Use {{tracking_url}} in the HTML to insert the unique tracking link.'
-  }, [])
 
   const templateCount = templates.length
   const campaignCount = campaigns.length
@@ -552,14 +549,6 @@ function App() {
     } finally {
       setDeletingTemplateId(null)
     }
-  }
-
-  const parseRecipients = (raw: string) => {
-    return raw
-      .split(/[\n,;]+/)
-      .map((value) => value.trim())
-      .filter(Boolean)
-      .map((email) => ({ email }))
   }
 
   const handleCreateCampaign = async (event: FormEvent) => {
