@@ -40,6 +40,7 @@ model Campaign {
 model Recipient {
   id             String      @id @default(uuid())
   email          String
+  displayName    String?
   azureObjectId  String?
   token          String      @unique
   tokenExpiresAt DateTime
@@ -67,3 +68,12 @@ model AuditLog {
   meta      Json?
   createdAt DateTime @default(now())
 }
+
+model Setting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+// ...additional models or code...

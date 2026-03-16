@@ -23,6 +23,9 @@ import { GraphClient } from '../services/graph/GraphClient';
 import { Config } from '../utils/config';
 import { Logger } from '../utils/logger';
 
+import { getAzureConfigHandler, setAzureConfigHandler } from '../controllers/settingsController';
+import { validateAzureConfigHandler } from '../controllers/validateAzureController';
+
 export type RouteDeps = {
   prisma: PrismaClient;
   config: Config;
@@ -49,6 +52,11 @@ export const createApiRouter = (deps: RouteDeps) => {
     '/campaigns/:id/start',
     startCampaignHandler(deps.prisma, deps.config, deps.graphClient, deps.logger),
   );
+
+  // Azure-Konfiguration
+  router.get('/settings/azure', getAzureConfigHandler(deps.prisma));
+  router.post('/settings/azure', setAzureConfigHandler(deps.prisma));
+  router.get('/settings/azure/validate', validateAzureConfigHandler(deps.prisma));
 
   return router;
 };

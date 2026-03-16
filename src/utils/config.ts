@@ -42,12 +42,5 @@ export const loadConfig = (): Config => {
     throw new Error('DATABASE_URL is required');
   }
 
-  if (!config.graphMockMode) {
-    if (!config.azureTenantId || !config.azureClientId || !config.azureClientSecret) {
-      throw new Error('Azure credentials are required when GRAPH_MOCK_MODE=false');
-    }
-
-  }
-
   return config;
 };

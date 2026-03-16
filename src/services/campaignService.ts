@@ -7,6 +7,7 @@ import { GraphClient } from './graph/GraphClient';
 
 export type CampaignRecipientInput = {
   email: string;
+  displayName?: string | null;
   azureObjectId?: string | null;
 };
 
@@ -64,6 +65,7 @@ export const createCampaign = async (
   await prisma.recipient.createMany({
     data: input.recipients.map((recipient) => ({
       email: recipient.email,
+      displayName: recipient.displayName || null,
       azureObjectId: recipient.azureObjectId || null,
       token: uuidv4(),
       tokenExpiresAt,
@@ -293,13 +295,48 @@ export const startCampaign = async (
     throw new Error('Sender email is required to start a campaign');
   }
 
+  // Template-Replace-Funktion importieren
+  const { replaceTemplatePlaceholders } = await import('../utils/templateReplace');
+
+  // Absenderdaten bestimmen
+  let absender_vorname = '';
+  let absender_nachname = '';
+  let absender_mail = senderEmail;
+  // Versuche, Absenderdaten aus Sender-Liste zu holen
+  const senders = await graphClient.listSenders();
+  const senderObj = senders.find(s => s.email === senderEmail);
+  if (senderObj && senderObj.displayName) {
+    const parts = senderObj.displayName.split(' ');
+    absender_vorname = parts[0] || '';
+    absender_nachname = parts.slice(1).join(' ') || '';
+  }
+
+  // Tenant-Name holen
+  const tenant_name = (await graphClient.getTenantName()) || config.tenantName || '';
+
   for (const recipient of campaign.recipients) {
     const trackingUrl = `${trackingBase}/t/${recipient.token}`;
     const templateBody = campaign.template.body;
-    const hasTrackingToken = /{{\s*tracking_url\s*}}/.test(templateBody);
-    const resolvedBody = hasTrackingToken
-      ? templateBody.replace(/{{\s*tracking_url\s*}}/g, trackingUrl)
-      : `${templateBody}<br/><br/><a href="${trackingUrl}">${trackingUrl}</a>`;
+
+    // Empfängername aufteilen
+    let Vorname = '';
+    let Nachname = '';
+    if (recipient.displayName) {
+      const parts = recipient.displayName.split(' ');
+      Vorname = parts[0] || '';
+      Nachname = parts.slice(1).join(' ') || '';
+    }
+
+    // Platzhalter ersetzen
+    const resolvedBody = replaceTemplatePlaceholders(templateBody, {
+      Vorname,
+      Nachname,
+      tenant_name,
+      absender_vorname,
+      absender_nachname,
+      absender_mail,
+      tracking_url: trackingUrl,
+    });
 
     await graphClient.sendMail({
       from: senderEmail,

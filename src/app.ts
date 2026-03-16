@@ -3,6 +3,7 @@ import cors from 'cors';
 
 import { createPrismaClient } from './db/prisma';
 import { createGraphClient } from './services/graph';
+import { loadAzureConfigFromDb } from './utils/azureConfigDb';
 import { createApiRouter, createPublicRouter, RouteDeps } from './routes';
 import { loadConfig, Config } from './utils/config';
 import { createLogger, Logger } from './utils/logger';
@@ -15,10 +16,15 @@ export type AppDeps = {
   logger: Logger;
 };
 
-export const createApp = (overrides: Partial<AppDeps> = {}) => {
+export const createApp = async (overrides: Partial<AppDeps> = {}) => {
   const config = overrides.config || loadConfig();
   const logger = overrides.logger || createLogger(config.logLevel);
   const prisma = overrides.prisma || createPrismaClient();
+  // Azure-Konfiguration aus DB laden
+  const azureConfig = await loadAzureConfigFromDb(prisma);
+  config.azureTenantId = azureConfig.AZURE_TENANT_ID;
+  config.azureClientId = azureConfig.AZURE_CLIENT_ID;
+  config.azureClientSecret = azureConfig.AZURE_CLIENT_SECRET;
   const graphClient = overrides.graphClient || createGraphClient(config, logger);
 
   const app = express();

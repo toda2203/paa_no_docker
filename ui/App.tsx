@@ -1,13 +1,8 @@
-
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import './App.css'
-
-// Typdefinitionen ...
-
-
 
 type Template = {
   id: string
@@ -78,7 +73,6 @@ type View = 'home' | 'templates' | 'campaigns' | 'settings'
 type PreviewMode = 'draft' | 'saved'
 
 function App() {
-  const [currentTenantId, setCurrentTenantId] = useState<string>('')
   const [templates, setTemplates] = useState<Template[]>([])
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [view, setView] = useState<View>('home')
@@ -640,155 +634,6 @@ function App() {
     }
   }
 
-
-  // Login- und Settings-States
-
-  // Login-States aus .env
-  const envUser = import.meta.env.VITE_LOGIN_USER || ''
-  const envPass = import.meta.env.VITE_LOGIN_PASS || ''
-  const [user, setUser] = useState<string>(envUser)
-  const [pass, setPass] = useState<string>(envPass)
-  const [token, setToken] = useState<string>(() => localStorage.getItem('paa_token') || '')
-  const [loginError, setLoginError] = useState<string | null>(null)
-  const [loginLoading, setLoginLoading] = useState(false)
-
-  // Login-Handler mit User/Pass
-  const handleLogin = async (event: FormEvent) => {
-    event.preventDefault()
-    setLoginLoading(true)
-    setLoginError(null)
-    try {
-      if (!user || !pass) {
-        setLoginError('Bitte Benutzer und Passwort eingeben.')
-        return
-      }
-      // Dummy-Login: User/Pass prüfen gegen .env
-      if (user === envUser && pass === envPass) {
-        const fakeToken = btoa(`${user}:${pass}`)
-        localStorage.setItem('paa_token', fakeToken)
-        setToken(fakeToken)
-        setLoginError(null)
-      } else {
-        setLoginError('Login fehlgeschlagen: falsche Daten.')
-      }
-    } catch (error) {
-      setLoginError('Login fehlgeschlagen.')
-    } finally {
-      setLoginLoading(false)
-    }
-  }
-
-  // Logout
-  const handleLogout = () => {
-    localStorage.removeItem('paa_token')
-    setToken('')
-  }
-
-  // Login-Panel
-  if (!token) {
-    return (
-      <div className="login-panel">
-        <h2>Login erforderlich</h2>
-        <form onSubmit={handleLogin} className="form">
-          <label>
-            Benutzer
-            <input
-              value={user}
-              onChange={e => setUser(e.target.value)}
-              placeholder="Benutzer"
-              required
-            />
-          </label>
-          <label>
-            Passwort
-            <input
-              type="password"
-              value={pass}
-              onChange={e => setPass(e.target.value)}
-              placeholder="Passwort"
-              required
-            />
-          </label>
-          <button type="submit" disabled={loginLoading}>
-            {loginLoading ? 'Einloggen...' : 'Login'}
-          </button>
-          {loginError ? <div className="status danger">{loginError}</div> : null}
-        </form>
-      </div>
-    )
-  }
-
-
-  // Tenant Credentials State (aus LocalStorage oder leer)
-  const [tenantId, setTenantId] = useState<string>(() => localStorage.getItem('tenant_id') || '')
-  const [clientId, setClientId] = useState<string>(() => localStorage.getItem('client_id') || '')
-  const [clientSecret, setClientSecret] = useState<string>(() => localStorage.getItem('client_secret') || '')
-  const [credStatus, setCredStatus] = useState<string | null>(null)
-
-  // Speichern
-  const handleSaveCreds = async (e: FormEvent) => {
-    e.preventDefault()
-    setCredStatus('Speichere...')
-    try {
-      const res = await fetch('/api/settings/azure', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          AZURE_TENANT_ID: tenantId,
-          AZURE_CLIENT_ID: clientId,
-          AZURE_CLIENT_SECRET: clientSecret,
-        })
-      })
-      if (!res.ok) throw new Error('Fehler beim Speichern')
-      // Optional: auch weiterhin im LocalStorage speichern
-      localStorage.setItem('tenant_id', tenantId)
-      localStorage.setItem('client_id', clientId)
-      localStorage.setItem('client_secret', clientSecret)
-      setCredStatus('Gespeichert!')
-    } catch (err) {
-      setCredStatus('Fehler beim Speichern!')
-    }
-    setTimeout(() => setCredStatus(null), 2000)
-  }
-
-  // Dummy-Validierung (nur Format prüfen, keine API)
-  const handleValidateCreds = () => {
-    if (!tenantId || !clientId || !clientSecret) {
-      setCredStatus('Bitte alle Felder ausfüllen.')
-      return
-    }
-    if (tenantId.length < 10 || clientId.length < 10 || clientSecret.length < 10) {
-      setCredStatus('Ungültiges Format.')
-      return
-    }
-    setCredStatus('Validierung erfolgreich!')
-    setTimeout(() => setCredStatus(null), 2000)
-  }
-
-  // Settings-Panel mit Eingabefeldern
-  const SettingsPanel = () => (
-    <div className="settings-panel">
-      <h2>Tenant Credentials</h2>
-      <form onSubmit={handleSaveCreds} className="form">
-        <label>
-          Tenant ID
-          <input value={tenantId} onChange={e => setTenantId(e.target.value)} placeholder="Tenant ID" required />
-        </label>
-        <label>
-          Client ID
-          <input value={clientId} onChange={e => setClientId(e.target.value)} placeholder="Client ID" required />
-        </label>
-        <label>
-          Client Secret
-          <input type="password" value={clientSecret} onChange={e => setClientSecret(e.target.value)} placeholder="Client Secret" required />
-        </label>
-        <button type="submit">Speichern</button>
-        <button type="button" className="ghost" style={{marginLeft:8}} onClick={handleValidateCreds}>Validieren</button>
-        {credStatus ? <div className="status" style={{marginTop:8}}>{credStatus}</div> : null}
-      </form>
-    </div>
-  )
-
   return (
     <div className="app">
       <header className="topbar">
@@ -806,9 +651,6 @@ function App() {
           </button>
           <button className="ghost" onClick={() => void fetchCampaigns()}>
             Refresh
-          </button>
-          <button className="ghost danger" onClick={handleLogout}>
-            Logout
           </button>
         </div>
       </header>
@@ -847,16 +689,6 @@ function App() {
               <span>Token ready</span>
             </div>
           </div>
-          <div className="menu-card" onClick={() => setView('tenantcreds')}>
-            <div>
-              <h2>Settings</h2>
-              <p>Manage Tenant Credentials (Azure).</p>
-            </div>
-            <div className="menu-meta">
-              <span>Tenant</span>
-              <span>Credentials</span>
-            </div>
-          </div>
           <div className="menu-card info">
             <div>
               <h2>Quick guide</h2>
@@ -869,16 +701,6 @@ function App() {
           </div>
         </section>
       ) : null}
-      {view === 'tenantcreds' ? (
-        <section className="grid">
-          <div className="panel">
-            <button className="ghost" style={{float:'right'}} onClick={() => setView('home')}>Zurück</button>
-            <SettingsPanel />
-          </div>
-        </section>
-      ) : null}
-
-      {view === 'settings' ? <SettingsPanel /> : null}
 
       {view === 'templates' ? (
         <section className="grid">
@@ -915,11 +737,8 @@ function App() {
                   required
                 />
               </label>
-              <label style={{position:'relative'}}>
+              <label>
                 HTML Body
-                <span style={{position:'absolute',right:0,top:-24,fontSize:'0.9em',color:'#888'}} title="Verfügbare Platzhalter: {{Vorname}}, {{Nachname}}, {{tracking_url}}, {{tenant_name}}, {{absender_vorname}}, {{absender_nachname}}, {{absender_mail}}, {{date_time}}">
-                  <span style={{borderBottom:'1px dotted #888',cursor:'help'}}>ℹ Platzhalter: &#123;&#123;Vorname&#125;&#125;, &#123;&#123;Nachname&#125;&#125;, &#123;&#123;tracking_url&#125;&#125;, &#123;&#123;tenant_name&#125;&#125;, &#123;&#123;absender_vorname&#125;&#125;, &#123;&#123;absender_nachname&#125;&#125;, &#123;&#123;absender_mail&#125;&#125;, &#123;&#123;date_time&#125;&#125;</span>
-                </span>
                 <textarea
                   rows={10}
                   value={templateForm.body}
@@ -1057,11 +876,6 @@ function App() {
               <div>
                 <h2>New Campaign</h2>
                 <p>Sender address is stored per campaign for tenant-specific delivery.</p>
-                {currentTenantId && (
-                  <div style={{marginTop:8, fontSize:'0.95em', color:'#888'}}>
-                    Aktueller Tenant: <strong>{currentTenantId}</strong>
-                  </div>
-                )}
               </div>
               <button className="ghost" onClick={() => setView('home')}>
                 Back to menu
