@@ -1212,7 +1212,7 @@ function App() {
                   <strong>{overallClicks}</strong>
                 </div>
                 <div>
-                  <h3>Gefaehrdungsindex</h3>
+                  <h3>Hazardsindex</h3>
                   <strong>{overallRisk}%</strong>
                 </div>
               </div>
