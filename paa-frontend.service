@@ -1,0 +1,13 @@
+[Unit]
+Description=PAA Frontend
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/paa/ui
+ExecStart=/usr/bin/npm run preview -- --port 5173 --host 0.0.0.0
+Restart=always
+User=daniel
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target

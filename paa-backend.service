@@ -1,0 +1,13 @@
+[Unit]
+Description=PAA Backend
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/paa
+ExecStart=/usr/bin/npm run start
+Restart=always
+User=daniel
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target

@@ -12,7 +12,7 @@ import {
 import { healthHandler } from '../controllers/healthController';
 import { listDepartmentsHandler, listRecipientsHandler } from '../controllers/recipientController';
 import { listSendersHandler } from '../controllers/senderController';
-import { landingHandler, trackTokenHandler } from '../controllers/trackingController';
+import { trackTokenHandler, awarenessHandler } from '../controllers/trackingController';
 import {
   createTemplateHandler,
   deleteTemplateHandler,
@@ -69,7 +69,8 @@ export const createPublicRouter = (deps: RouteDeps) => {
     '/t/:token',
     trackTokenHandler(deps.prisma, deps.config, deps.graphClient, deps.logger),
   );
-  router.get('/landing', landingHandler());
+  // router.get('/landing', landingHandler());
+  router.get('/awareness', awarenessHandler());
 
   return router;
 };

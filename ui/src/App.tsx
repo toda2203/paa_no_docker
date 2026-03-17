@@ -78,7 +78,7 @@ type View = 'home' | 'templates' | 'campaigns' | 'settings'
 type PreviewMode = 'draft' | 'saved'
 
 function App() {
-  const [currentTenantId, setCurrentTenantId] = useState<string>('')
+  // const [currentTenantId, setCurrentTenantId] = useState<string>('')
   const [templates, setTemplates] = useState<Template[]>([])
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [view, setView] = useState<View>('home')
@@ -847,7 +847,7 @@ function App() {
               <span>Token ready</span>
             </div>
           </div>
-          <div className="menu-card" onClick={() => setView('tenantcreds')}>
+          <div className="menu-card" onClick={() => setView('settings')}>
             <div>
               <h2>Settings</h2>
               <p>Manage Tenant Credentials (Azure).</p>
@@ -869,7 +869,7 @@ function App() {
           </div>
         </section>
       ) : null}
-      {view === 'tenantcreds' ? (
+      {view === 'settings' ? (
         <section className="grid">
           <div className="panel">
             <button className="ghost" style={{float:'right'}} onClick={() => setView('home')}>Zurück</button>
@@ -1057,9 +1057,9 @@ function App() {
               <div>
                 <h2>New Campaign</h2>
                 <p>Sender address is stored per campaign for tenant-specific delivery.</p>
-                {currentTenantId && (
+                {tenantId && (
                   <div style={{marginTop:8, fontSize:'0.95em', color:'#888'}}>
-                    Aktueller Tenant: <strong>{currentTenantId}</strong>
+                    Aktueller Tenant: <strong>{tenantId}</strong>
                   </div>
                 )}
               </div>
