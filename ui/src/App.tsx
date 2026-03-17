@@ -74,7 +74,7 @@ type CampaignSummary = {
 }
 
 const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'
-type View = 'home' | 'templates' | 'campaigns' | 'settings'
+type View = 'home' | 'templates' | 'campaigns' | 'settings' | 'tracking'
 type PreviewMode = 'draft' | 'saved'
 
 function App() {
@@ -354,7 +354,7 @@ function App() {
     return docWithTable.lastAutoTable?.finalY ? docWithTable.lastAutoTable.finalY + 8 : fallback
   }
 
-  const exportOverallPdf = () => {
+  const exportOverallPdf = async () => {
     const doc = new jsPDF()
     const generatedAt = new Date().toLocaleString()
     doc.setFontSize(16)
@@ -390,6 +390,38 @@ function App() {
       body: summaryRows.length > 0 ? summaryRows : [['No started campaigns yet.', '', '', '', '', '']],
       theme: 'grid',
     })
+
+    // Für jede Campaign die Click-Events laden und exportieren
+    for (const campaign of startedCampaigns) {
+      doc.addPage()
+      doc.setFontSize(14)
+      doc.text(`Click Events - ${campaign.name}`, 14, 18)
+      try {
+        const response = await fetch(`${apiBase}/api/campaigns/${campaign.id}/clicks`)
+        if (!response.ok) throw new Error('Failed to load clicks')
+        const data = (await response.json()) as Partial<ClickSummary>
+        const clickItems = data.items ?? []
+        if (clickItems.length > 0) {
+          autoTable(doc, {
+            startY: 24,
+            head: [['Recipient', 'Clicks', 'First click', 'Tenant', 'IP', 'User agent']],
+            body: clickItems.map((item) => [
+              item.recipientEmail,
+              `${item.clickCount}`,
+              formatDateTime(item.createdAt),
+              item.tenantName || '—',
+              item.ip || '—',
+              item.userAgent || '—',
+            ]),
+            theme: 'grid',
+          })
+        } else {
+          doc.text('No click events for this campaign.', 14, 30)
+        }
+      } catch (err) {
+        doc.text('Error loading click events.', 14, 30)
+      }
+    }
 
     doc.save(`click-overview-overall-${new Date().toISOString().slice(0, 10)}.pdf`)
   }
@@ -837,14 +869,14 @@ function App() {
               <span>Drafts and active</span>
             </div>
           </div>
-          <div className="menu-card" onClick={() => setView('settings')}>
+          <div className="menu-card" onClick={() => setView('tracking')}>
             <div>
               <h2>Tracking</h2>
-              <p>Review API endpoint, tracking token, and delivery rules.</p>
+              <p>Review campaign click reports and statistics.</p>
             </div>
             <div className="menu-meta">
-              <span>API connected</span>
-              <span>Token ready</span>
+              <span>Report</span>
+              <span>Analytics</span>
             </div>
           </div>
           <div className="menu-card" onClick={() => setView('settings')}>
@@ -869,11 +901,229 @@ function App() {
           </div>
         </section>
       ) : null}
+
       {view === 'settings' ? (
         <section className="grid">
           <div className="panel">
             <button className="ghost" style={{float:'right'}} onClick={() => setView('home')}>Zurück</button>
             <SettingsPanel />
+          </div>
+        </section>
+      ) : null}
+
+      {view === 'tracking' ? (
+        <section className="grid">
+          <div className="panel analytics">
+            <div className="analytics-header">
+              <div>
+                <h2>Click overview</h2>
+                <p>Clear view of who clicked within the selected campaign.</p>
+                {summaryError ? <div className="status warning">{summaryError}</div> : null}
+              </div>
+              <div className="analytics-actions">
+                <button type="button" className="ghost" onClick={exportOverallPdf}>
+                  Export overall PDF
+                </button>
+                <button type="button" onClick={exportCampaignPdf}>
+                  Export campaign PDF
+                </button>
+              </div>
+            </div>
+            <div>
+              <h3>Overall KPI (started campaigns)</h3>
+              <div className="analytics-summary">
+                <div>
+                  <h3>Campaigns</h3>
+                  <strong>{overallCampaigns}</strong>
+                </div>
+                <div>
+                  <h3>Sent</h3>
+                  <strong>{overallSends}</strong>
+                </div>
+                <div>
+                  <h3>Clicks</h3>
+                  <strong>{overallClicks}</strong>
+                </div>
+                <div>
+                  <h3>Hazardsindex</h3>
+                  <strong>{overallRisk}%</strong>
+                </div>
+              </div>
+            </div>
+            <div className="analytics-summary">
+              <div>
+                <h3>Recipients</h3>
+                <strong>{recipientTotal}</strong>
+              </div>
+              <div>
+                <h3>Clicked</h3>
+                <strong>{clickedCount}</strong>
+              </div>
+              <div>
+                <h3>Not clicked</h3>
+                <strong>{unclickedCount}</strong>
+              </div>
+              <div>
+                <h3>Click rate</h3>
+                <strong>{clickRate}%</strong>
+              </div>
+            </div>
+            <div className="analytics-chart">
+              <h3>Clicked vs not clicked</h3>
+              <div className="donut-wrap">
+                <div
+                  className="donut"
+                  style={{
+                    background: `conic-gradient(#ff7a00 ${clickRate}%, #f0e6d8 ${clickRate}% 100%)`,
+                  }}
+                  aria-label={`Click rate ${clickRate} percent`}
+                />
+                <div className="donut-legend">
+                  <div>
+                    <span className="swatch clicked" /> Clicked
+                  </div>
+                  <div>
+                    <span className="swatch pending" /> Not clicked
+                  </div>
+                </div>
+              </div>
+              <div className="analytics-footnote">
+                {selectedCampaign
+                  ? `Campaign: ${selectedCampaign.name}`
+                  : 'Select a campaign to see results.'}
+              </div>
+            </div>
+            <div className="analytics-chart">
+              <h3>Clicks per day</h3>
+              {clickTimeline.length === 0 ? (
+                <div className="table-empty">No click activity yet.</div>
+              ) : (
+                clickTimeline.map((entry) => (
+                  <div className="chart-row" key={entry.date}>
+                    <span>{entry.date}</span>
+                    <div className="chart-bar">
+                      <div style={{ width: `${Math.min(100, entry.count * 10)}%` }} />
+                    </div>
+                    <strong>{entry.count}</strong>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="analytics-chart">
+              <h3>Click rate by campaign</h3>
+              {campaignSummaries.length === 0 ? (
+                <div className="table-empty">No campaign stats yet.</div>
+              ) : (
+                campaignSummaries.map((summary) => {
+                  const rate = summary.recipientTotal
+                    ? Math.round((summary.clickedRecipients / summary.recipientTotal) * 100)
+                    : 0
+                  return (
+                    <div className="chart-row" key={summary.id}>
+                      <span>{summary.name}</span>
+                      <div className="chart-bar">
+                        <div style={{ width: `${rate}%` }} />
+                      </div>
+                      <strong>{rate}%</strong>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+            <div className="analytics-card">
+              <h3>First & average click</h3>
+              <div className="metric-row">
+                <span>First Link Clicked</span>
+                <strong>{firstClickedLabel}</strong>
+              </div>
+              <div className="metric-row">
+                <span>Avg. Link Clicked</span>
+                <strong>{avgClickedLabel}</strong>
+              </div>
+            </div>
+          </div>
+          <div className="panel list">
+            <div className="panel-header">
+              <div>
+                <h2>Campaigns</h2>
+                <p>Choose a campaign to inspect click activity.</p>
+              </div>
+              <button onClick={() => void fetchCampaigns()} disabled={loading.campaigns}>
+                {loading.campaigns ? 'Refreshing...' : 'Refresh'}
+              </button>
+            </div>
+            <div className="table campaigns-table">
+              <div className="table-head">
+                <span>Name</span>
+                <span>Status</span>
+                <span>Recipients</span>
+                <span>Window</span>
+              </div>
+              {campaigns.length === 0 ? (
+                <div className="table-empty">No campaigns yet.</div>
+              ) : (
+                campaigns.map((campaign) => (
+                  <div
+                    className={`table-row ${selectedCampaignId === campaign.id ? 'selected' : ''}`}
+                    key={campaign.id}
+                    onClick={() => {
+                      setSelectedCampaignId(campaign.id)
+                      void fetchClicks(campaign.id)
+                    }}
+                  >
+                    <span>{campaign.name}</span>
+                    <span className={`status-pill status-${campaign.status.toLowerCase()}`}>
+                      {campaign.status}
+                    </span>
+                    <span>{campaign.recipientCount}</span>
+                    <span>
+                      {campaign.startDate || campaign.endDate
+                        ? `${campaign.startDate ? new Date(campaign.startDate).toLocaleDateString() : 'Any'} – ${campaign.endDate ? new Date(campaign.endDate).toLocaleDateString() : 'Any'}`
+                        : 'Any'}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+          <div className="panel list">
+            <div className="panel-header">
+              <div>
+                <h2>Click Events</h2>
+                <p>Selection fills the click list on the right.</p>
+              </div>
+              <button
+                onClick={() => void fetchClicks(selectedCampaignId)}
+                disabled={loading.clicks || !selectedCampaignId}
+              >
+                {loading.clicks ? 'Refreshing...' : 'Refresh'}
+              </button>
+            </div>
+            <div className="click-toolbar">
+              <span className="click-count">{clicks.length} clicks</span>
+            </div>
+            <div className="table clicks-table">
+              <div className="table-head">
+                <span>Time</span>
+                <span>Recipient</span>
+                <span>Tenant</span>
+                <span>IP</span>
+                <span>Clicks</span>
+              </div>
+              {clicks.length === 0 ? (
+                <div className="table-empty">No clicks yet.</div>
+              ) : (
+                clicks.map((click) => (
+                  <div className="table-row" key={click.id}>
+                    <span>{new Date(click.createdAt).toLocaleString()}</span>
+                    <span>{click.recipientEmail}</span>
+                    <span>{click.tenantName || 'Unknown'}</span>
+                    <span>{click.ip || '-'}</span>
+                    <span>{click.clickCount}</span>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </section>
       ) : null}
