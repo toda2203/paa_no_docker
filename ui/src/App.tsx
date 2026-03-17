@@ -824,9 +824,12 @@ function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <div>
-          <p className="kicker">Phishing Awareness Admin</p>
-          <h1>Security campaigns command center.</h1>
+        <div style={{display:'flex',alignItems:'center',gap:'16px'}}>
+          <img src="/paa.png" alt="PAA Logo" style={{height:'48px',borderRadius:'8px',boxShadow:'0 2px 8px #0001'}} />
+          <div>
+            <p className="kicker">Phishing Awareness Admin</p>
+            <h1>Security campaigns command center.</h1>
+          </div>
         </div>
         <div className="topbar-actions">
           <button
